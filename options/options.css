@@ -1,0 +1,31 @@
+main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
+h1 { font-size: 20px; margin: 0 0 16px; }
+h2 { font-size: 15px; margin: 28px 0 6px; }
+section > p { margin: 0 0 14px; }
+
+.rule-head,
+.rule {
+  display: grid;
+  grid-template-columns: 24px 1fr 20px 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.rule-head { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+.rule { margin-bottom: 8px; }
+.rule .arrow { text-align: center; color: var(--muted); }
+.rule .buttons { display: flex; gap: 6px; }
+.rule.disabled input[type="text"] { opacity: 0.5; }
+.rule input.invalid { outline: 2px solid var(--danger); outline-offset: -1px; }
+
+#add { margin-top: 4px; }
+#status { margin-left: 10px; }
+
+#test-results { padding-left: 18px; word-break: break-all; }
+#test-results li { margin: 4px 0; }
+
+@media (max-width: 520px) {
+  .rule-head { display: none; }
+  .rule { grid-template-columns: 24px 1fr; }
+  .rule .arrow { display: none; }
+  .rule input[type="text"], .rule .buttons { grid-column: 2; }
+}
