@@ -1,32 +1,67 @@
-// Feature: switch the domain of a URL while keeping path, query and hash.
+// Feature: jump between environments of the same project while keeping path, query and hash.
 //
-// A rule looks like { id, from, to, enabled }.
-//   from: "test.com"      matches test.com and any subdomain (app.test.com)
-//   to:   "test-qa.com"   replaces the matched part; may include a port ("localhost:3000")
+// A project groups environments that serve the same app on different domains:
+//   { id, name: "Dashboard", envs: [
+//       { id, name: "Prod",  domain: "test.com",       color: "rose"  },
+//       { id, name: "QA",    domain: "test-qa.com",    color: "amber" },
+//       { id, name: "Local", domain: "localhost:3000", color: "violet" } ] }
 //
-// Example: https://app.test.com/dashboard/2?x=1  --(test.com → test-qa.com)-->
-//          https://app.test-qa.com/dashboard/2?x=1
+// An env domain matches itself and any subdomain, and the subdomain is carried over:
+//   https://app.test.com/dashboard/2?x=1  (Prod → QA)  https://app.test-qa.com/dashboard/2?x=1
 
-const STORAGE_KEY = "domainRules";
+const STORAGE_KEY = "projects";
+const LEGACY_KEY = "domainRules";
 
-export const DEFAULT_RULES = [
-  { id: "example-1", from: "test.com", to: "test-qa.com", enabled: true },
-];
+export const COLORS = ["rose", "amber", "green", "blue", "violet", "slate"];
 
-export async function getRules() {
+export function newId() {
+  return crypto.randomUUID().slice(0, 8);
+}
+
+// Pick a sensible default colour from the env name, avoiding colours already used
+// in the project; falls back to position.
+export function suggestColor(name, index = 0, used = []) {
+  const n = String(name).toLowerCase();
+  const byName =
+    /prod|live/.test(n) ? "rose" :
+    /qa|test|uat/.test(n) ? "amber" :
+    /stag|pre/.test(n) ? "blue" :
+    /local|dev/.test(n) ? "violet" : null;
+  if (byName && !used.includes(byName)) return byName;
+  const free = COLORS.filter((c) => !used.includes(c));
+  return free.length ? free[index % free.length] : COLORS[index % COLORS.length];
+}
+
+// Fixed IDs: menu items are looked up by ID on click, so defaults must not change between reads.
+function defaultProjects() {
+  return [
+    {
+      id: "example",
+      name: "Example",
+      envs: [
+        { id: "example-prod", name: "Prod", domain: "test.com", color: "rose" },
+        { id: "example-qa", name: "QA", domain: "test-qa.com", color: "amber" },
+      ],
+    },
+  ];
+}
+
+export async function getProjects() {
   const data = await chrome.storage.sync.get(STORAGE_KEY);
-  return data[STORAGE_KEY] ?? DEFAULT_RULES;
+  return data[STORAGE_KEY] ?? defaultProjects();
 }
 
-export async function saveRules(rules) {
-  await chrome.storage.sync.set({ [STORAGE_KEY]: rules });
+export async function saveProjects(projects) {
+  await chrome.storage.sync.set({ [STORAGE_KEY]: projects });
 }
 
-export function onRulesChanged(callback) {
+export function onProjectsChanged(callback) {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === "sync" && changes[STORAGE_KEY]) callback(changes[STORAGE_KEY].newValue ?? []);
   });
 }
+
+// ---- Domain helpers -------------------------------------------------------
 
 // Normalise user input: strip scheme, path and trailing dots, lowercase.
 export function cleanDomain(value) {
@@ -38,39 +73,53 @@ export function cleanDomain(value) {
     .replace(/\.+$/, "");
 }
 
+export const DOMAIN_RE = /^[a-z0-9-]+(\.[a-z0-9-]+)*(:\d{1,5})?$/;
+
+export function isValidDomain(value) {
+  return DOMAIN_RE.test(cleanDomain(value));
+}
+
 function hostnameOf(domain) {
   return domain.replace(/:\d+$/, "");
 }
 
-export function ruleMatches(rule, url) {
-  if (!rule.enabled || !rule.from || !rule.to) return false;
-  let parsed;
+function parseHttpUrl(url) {
   try {
-    parsed = new URL(url);
+    const parsed = new URL(url);
+    return /^https?:$/.test(parsed.protocol) ? parsed : null;
   } catch {
-    return false;
+    return null;
   }
-  if (!/^https?:$/.test(parsed.protocol)) return false;
-
-  const from = cleanDomain(rule.from);
-  const fromHost = hostnameOf(from);
-  const hasPort = from !== fromHost;
-  // If the rule specifies a port, the port must match too.
-  if (hasPort && parsed.host !== from && !parsed.host.endsWith("." + from)) return false;
-  return parsed.hostname === fromHost || parsed.hostname.endsWith("." + fromHost);
 }
 
-export function applyRule(rule, url) {
-  if (!ruleMatches(rule, url)) return null;
-  const parsed = new URL(url);
-  const from = cleanDomain(rule.from);
-  const to = cleanDomain(rule.to);
-  const fromHost = hostnameOf(from);
-  const subdomain = parsed.hostname.slice(0, parsed.hostname.length - fromHost.length); // "app." or ""
+// How specifically `domain` matches `url`: 0 = no match, higher = more specific.
+// Lets qa.test.com win over test.com when both are configured.
+export function matchScore(domain, url) {
+  const parsed = parseHttpUrl(url);
+  const clean = cleanDomain(domain);
+  if (!parsed || !isValidDomain(clean)) return 0;
 
-  // Use the target's port if it has one; drop the source port if the rule named it;
-  // otherwise keep the original port.
+  const host = hostnameOf(clean);
+  const hasPort = clean !== host;
+  // If the env specifies a port, the port must match too.
+  if (hasPort && parsed.host !== clean && !parsed.host.endsWith("." + clean)) return 0;
+  if (parsed.hostname !== host && !parsed.hostname.endsWith("." + host)) return 0;
+  return host.length * 2 + (hasPort ? 1 : 0);
+}
+
+export function switchUrl(url, fromDomain, toDomain) {
+  if (!matchScore(fromDomain, url) || !isValidDomain(toDomain)) return null;
+  const parsed = new URL(url);
+  const from = cleanDomain(fromDomain);
+  const to = cleanDomain(toDomain);
+  const fromHost = hostnameOf(from);
   const toHost = hostnameOf(to);
+  // Carry the subdomain over ("app."), except onto localhost or an IP where it makes no sense.
+  const bareTarget = toHost === "localhost" || /^\d+(\.\d+){3}$/.test(toHost);
+  const subdomain = bareTarget ? "" : parsed.hostname.slice(0, parsed.hostname.length - fromHost.length);
+
+  // Use the target's port if it has one; drop the source port if the env named it;
+  // otherwise keep the original port.
   const toPort = to.slice(toHost.length + 1);
   const port = toPort || (from !== fromHost ? "" : parsed.port);
   // Setting `host` without a port does not clear an existing one, so set both explicitly.
@@ -79,24 +128,36 @@ export function applyRule(rule, url) {
   return parsed.toString();
 }
 
-export function matchingRules(rules, url) {
-  return rules.filter((rule) => ruleMatches(rule, url));
-}
-
-// Chrome match patterns used to show only relevant menu items on a page.
+// Chrome match patterns used to show menu items only on relevant pages.
 // Match patterns ignore ports, so "localhost:3000" becomes "*://localhost/*".
-export function urlPatternsFor(rule) {
-  const host = hostnameOf(cleanDomain(rule.from));
-  if (!host) return [];
+export function urlPatternsFor(domain) {
+  const clean = cleanDomain(domain);
+  if (!isValidDomain(clean)) return [];
+  const host = hostnameOf(clean);
   return [`*://${host}/*`, `*://*.${host}/*`];
 }
 
-export function ruleLabel(rule) {
-  return `${cleanDomain(rule.from)} → ${cleanDomain(rule.to)}`;
+// ---- Projects & environments ---------------------------------------------
+
+export function usableEnvs(project) {
+  return project.envs.filter((env) => env.name?.trim() && isValidDomain(env.domain));
 }
 
-export async function switchDomain(tab, rule, { newTab = false } = {}) {
-  const target = applyRule(rule, tab.url);
+// The project and environment the URL belongs to (most specific match), or null.
+export function findEnv(projects, url) {
+  let best = null;
+  for (const project of projects) {
+    for (const env of usableEnvs(project)) {
+      const score = matchScore(env.domain, url);
+      if (score && (!best || score > best.score)) best = { project, env, score };
+    }
+  }
+  return best && { project: best.project, env: best.env };
+}
+
+export async function openEnv(tab, fromEnv, toEnv, { newTab = false } = {}) {
+  if (fromEnv.id === toEnv.id) return false;
+  const target = switchUrl(tab.url, fromEnv.domain, toEnv.domain);
   if (!target) return false;
   if (newTab) {
     await chrome.tabs.create({ url: target, index: tab.index + 1, openerTabId: tab.id, active: true });
@@ -104,4 +165,52 @@ export async function switchDomain(tab, rule, { newTab = false } = {}) {
     await chrome.tabs.update(tab.id, { url: target });
   }
   return true;
+}
+
+// ---- Migration from v1 one-way rules -------------------------------------
+
+// Rules whose domains connect (a→b, b→a, b→c) become one project.
+export function rulesToProjects(rules) {
+  const parent = new Map();
+  const find = (d) => (parent.get(d) === d ? d : find(parent.get(d)));
+  const add = (d) => parent.has(d) || parent.set(d, d);
+
+  const names = new Map(); // domain -> env name taken from a rule pointing at it
+  for (const rule of rules) {
+    const from = cleanDomain(rule.from);
+    const to = cleanDomain(rule.to);
+    if (!isValidDomain(from) || !isValidDomain(to)) continue;
+    add(from);
+    add(to);
+    parent.set(find(from), find(to));
+    const name = String(rule.name ?? "").trim().replace(/^(open|go|switch) (in|to) /i, "");
+    if (name && !names.has(to)) names.set(to, name);
+  }
+
+  const groups = new Map();
+  for (const domain of parent.keys()) {
+    const root = find(domain);
+    if (!groups.has(root)) groups.set(root, []);
+    groups.get(root).push(domain);
+  }
+
+  return [...groups.values()].map((domains, i) => ({
+    id: newId(),
+    name: `Project ${i + 1}`,
+    envs: domains.reduce((envs, domain) => {
+      const name = names.get(domain) ?? domain;
+      const color = suggestColor(name, 0, envs.map((e) => e.color));
+      return [...envs, { id: newId(), name, domain, color }];
+    }, []),
+  }));
+}
+
+export async function migrateLegacyRules() {
+  const data = await chrome.storage.sync.get([STORAGE_KEY, LEGACY_KEY]);
+  if (!data[LEGACY_KEY]) return;
+  if (!data[STORAGE_KEY]) {
+    const projects = rulesToProjects(data[LEGACY_KEY]);
+    if (projects.length) await saveProjects(projects);
+  }
+  await chrome.storage.sync.remove(LEGACY_KEY);
 }

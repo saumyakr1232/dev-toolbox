@@ -1,31 +1,173 @@
-main { max-width: 720px; margin: 0 auto; padding: 24px 16px 48px; }
-h1 { font-size: 20px; margin: 0 0 16px; }
-h2 { font-size: 15px; margin: 28px 0 6px; }
-section > p { margin: 0 0 14px; }
+body { background: var(--surface); }
 
-.rule-head,
-.rule {
+main { max-width: 760px; margin: 0 auto; padding: 36px 16px 96px; }
+
+.page-head { display: flex; align-items: center; gap: 14px; margin-bottom: 28px; }
+.page-head img { border-radius: 9px; }
+h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+.page-head p { margin: 2px 0 0; }
+
+section { margin-bottom: 36px; }
+h2 { font-size: 15px; margin: 0 0 4px; }
+section > p, .section-head p { margin: 0 0 16px; max-width: 62ch; }
+
+/* Project card */
+.project {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 14px;
+  overflow: visible;
+}
+.project-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 8px 12px;
+  border-bottom: 1px solid var(--border);
+}
+input.title-input {
+  font-size: 15px;
+  font-weight: 650;
+  border-color: transparent;
+  background: transparent;
+  padding: 5px 8px;
+  margin-left: -8px;
+}
+input.title-input:hover { border-color: var(--border); }
+.project-head .count { white-space: nowrap; font-size: 12px; }
+
+.envs { padding: 8px 12px 4px; }
+.env-cols,
+.env-row {
   display: grid;
-  grid-template-columns: 24px 1fr 20px 1fr auto;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1.4fr) 92px;
   gap: 8px;
   align-items: center;
 }
-.rule-head { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
-.rule { margin-bottom: 8px; }
-.rule .arrow { text-align: center; color: var(--muted); }
-.rule .buttons { display: flex; gap: 6px; }
-.rule.disabled input[type="text"] { opacity: 0.5; }
-.rule input.invalid { outline: 2px solid var(--danger); outline-offset: -1px; }
+.env-cols {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  padding: 2px 0 6px;
+}
+.env { padding: 4px 0; }
+.env.flash { animation: flash 1.6s ease-out; border-radius: 8px; }
+@keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
+.env-actions { display: flex; justify-content: flex-end; gap: 2px; }
+.env-error { color: var(--danger); font-size: 12px; margin: 4px 0 2px 36px; }
+.env-error:empty { display: none; }
 
-#add { margin-top: 4px; }
-#status { margin-left: 10px; }
+.project-foot { padding: 4px 8px 10px; }
+.project-foot button, .add-project { display: inline-flex; align-items: center; gap: 6px; }
+.project-foot button svg, .add-project svg { width: 15px; height: 15px; }
+.project-foot button { color: var(--accent); font-weight: 600; }
 
-#test-results { padding-left: 18px; word-break: break-all; }
-#test-results li { margin: 4px 0; }
+.add-project {
+  width: 100%;
+  justify-content: center;
+  padding: 12px;
+  border: 1.5px dashed var(--border-strong);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--muted);
+  font-weight: 600;
+}
+.add-project:hover { color: var(--accent); border-color: var(--accent); background: var(--accent-soft); }
 
-@media (max-width: 520px) {
-  .rule-head { display: none; }
-  .rule { grid-template-columns: 24px 1fr; }
-  .rule .arrow { display: none; }
-  .rule input[type="text"], .rule .buttons { grid-column: 2; }
+.empty-projects {
+  text-align: center;
+  padding: 28px 16px;
+  margin-bottom: 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* Colour swatch + picker */
+.swatch-wrap { position: relative; }
+.swatch {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: transparent;
+  border-color: transparent;
+}
+.swatch:hover { background: var(--surface-hover); border-color: transparent; }
+.swatch .dot { width: 14px; height: 14px; }
+.picker {
+  position: absolute;
+  z-index: 10;
+  top: 32px;
+  left: -6px;
+  display: flex;
+  gap: 4px;
+  padding: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow);
+}
+.picker button { width: 26px; height: 26px; padding: 0; display: grid; place-items: center; border-radius: 50%; background: transparent; border: 0; }
+.picker button:hover { background: var(--surface-hover); }
+.picker .dot { width: 16px; height: 16px; }
+.picker button[aria-pressed="true"] .dot { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--env); }
+
+/* Try it */
+.test-results { margin-top: 12px; }
+.test-results:empty { display: none; }
+.test-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+.test-detected { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: 600; }
+.test-row { display: flex; align-items: baseline; gap: 10px; padding: 5px 0; border-top: 1px solid var(--border); }
+.test-row:first-of-type { border-top: 0; }
+.test-row .badge { flex: none; }
+.test-row code { word-break: break-all; color: var(--muted); }
+
+/* Toast */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 16px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px 9px 14px;
+  border-radius: 10px;
+  background: var(--text);
+  color: var(--bg);
+  box-shadow: var(--shadow);
+  font-weight: 500;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s, transform 0.18s;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
+.toast svg { width: 15px; height: 15px; }
+.toast button {
+  padding: 3px 10px;
+  background: transparent;
+  border-color: color-mix(in srgb, var(--bg) 35%, transparent);
+  color: var(--bg);
+  font-weight: 600;
+}
+.toast button:hover { background: color-mix(in srgb, var(--bg) 15%, transparent); }
+.toast button:empty { display: none; }
+
+@media (max-width: 560px) {
+  .env-cols { display: none; }
+  .env-row { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .env-row .domain-input { grid-column: 2 / 4; grid-row: 2; }
+  .env-error { margin-left: 36px; }
 }

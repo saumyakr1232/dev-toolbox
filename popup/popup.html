@@ -7,12 +7,27 @@
 </head>
 <body>
   <header>
-    <strong>Switch domain</strong>
-    <button id="manage" class="link">Manage rules</button>
+    <div class="where">
+      <span id="project" class="project"></span>
+      <span id="current" class="badge" hidden><span class="dot"></span><span></span></span>
+    </div>
+    <button id="settings" class="icon-btn" title="Settings" aria-label="Settings"></button>
   </header>
-  <div id="current" class="current muted"></div>
-  <ul id="rules"></ul>
-  <p id="empty" class="muted" hidden>No rules match this page.</p>
+
+  <main id="main">
+    <div id="switch" hidden>
+      <div class="label">Switch to</div>
+      <ul id="envs"></ul>
+      <p class="hint muted">Click to open here · <kbd id="hint-mod">⌘</kbd>-click or <span class="inline-icon" id="hint-icon"></span> for a new tab</p>
+    </div>
+
+    <div id="empty" class="empty" hidden>
+      <div class="empty-icon" id="empty-icon"></div>
+      <div class="empty-title" id="empty-title"></div>
+      <div class="empty-text muted" id="empty-text"></div>
+      <button id="add-site" class="primary" hidden></button>
+    </div>
+  </main>
   <script type="module" src="popup.js"></script>
 </body>
 </html>

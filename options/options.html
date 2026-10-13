@@ -2,37 +2,45 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Dev Toolbox – Settings</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dev Toolbox · Settings</title>
   <link rel="stylesheet" href="../shared.css" />
   <link rel="stylesheet" href="options.css" />
 </head>
 <body>
   <main>
-    <h1>Dev Toolbox</h1>
+    <header class="page-head">
+      <img src="../icons/icon48.png" alt="" width="36" height="36" />
+      <div>
+        <h1>Dev Toolbox</h1>
+        <p class="muted">Jump between environments of the same app without losing your place.</p>
+      </div>
+    </header>
 
     <section>
-      <h2>Domain switch rules</h2>
-      <p class="muted">
-        Swap a page's domain and keep its path, query and hash.
-        <code>test.com</code> also matches subdomains, so <code>app.test.com/dashboard/2</code>
-        becomes <code>app.test-qa.com/dashboard/2</code>. Ports are allowed, e.g. <code>localhost:3000</code>.
-        Add a second rule in the opposite direction to switch back.
-      </p>
-
-      <div class="rule-head muted">
-        <span></span><span>From</span><span></span><span>To</span><span></span>
+      <div class="section-head">
+        <div>
+          <h2>Projects</h2>
+          <p class="muted">
+            Group the domains one app runs on. On any of them, right-click or use the toolbar icon to open the
+            same page in another environment. Subdomains carry over
+            (<code>app.test.com</code> → <code>app.test-qa.com</code>), and ports work too (<code>localhost:3000</code>).
+          </p>
+        </div>
       </div>
-      <div id="rules"></div>
-      <button id="add">+ Add rule</button>
-      <span id="status" class="muted"></span>
+      <div id="projects"></div>
+      <button id="add-project" class="add-project"></button>
     </section>
 
     <section>
       <h2>Try it</h2>
-      <input type="text" id="test-url" placeholder="Paste a URL, e.g. https://test.com/dashboard/2" />
-      <ul id="test-results" class="muted"></ul>
+      <p class="muted">Paste a URL to see where each environment would take you.</p>
+      <input type="url" id="test-url" placeholder="https://test.com/dashboard/2?tab=usage" spellcheck="false" />
+      <div id="test-results" class="test-results"></div>
     </section>
   </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="options.js"></script>
 </body>
 </html>

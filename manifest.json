@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Dev Toolbox",
-  "version": "1.0.0",
-  "description": "Context-menu shortcuts for everyday dev work. Switch a tab's domain (e.g. prod → QA) in place or in a new tab.",
+  "version": "2.0.0",
+  "description": "Jump between environments of the same app (Prod, QA, Staging, Local) from the right-click menu or toolbar, keeping your place.",
   "permissions": ["contextMenus", "storage", "activeTab"],
   "background": {
     "service_worker": "background.js",
