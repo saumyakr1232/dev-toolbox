@@ -1,10 +1,10 @@
 // Feature: copy the MSAL bearer token the app on the current tab already holds,
 // so it can be pasted into Postman or a curl header without logging in again.
 //
-// MSAL.js caches access tokens in the page's localStorage/sessionStorage as JSON
-// entries whose key contains "accesstoken" and whose value has credentialType
-// "AccessToken" and a "secret" field (the JWT). We read those straight from the
-// tab and copy the newest one that hasn't expired.
+// MSAL.js caches tokens in the page's localStorage/sessionStorage as JSON entries
+// with a "secret" field holding the JWT. We read those from the active tab, split
+// them into access vs. id tokens (by credentialType, falling back to decoding the
+// JWT), and copy the one a project's rule asks for.
 //
 // Reading uses chrome.scripting on the active tab, so the activeTab grant from a
 // toolbar or context-menu click is enough — no host permissions, and the token
@@ -12,28 +12,65 @@
 
 // ---- Injected functions (run in the page; must be self-contained) ---------
 
-// Collects raw MSAL access-token cache entries from both web stores.
+// Collects MSAL token cache entries from both web stores, classified by type.
 function readMsalTokens() {
+  const b64urlToStr = (s) => {
+    try {
+      s = s.replace(/-/g, "+").replace(/_/g, "/");
+      s += "===".slice((s.length + 3) % 4);
+      return decodeURIComponent(
+        atob(s)
+          .split("")
+          .map((c) => "%" + c.charCodeAt(0).toString(16).padStart(2, "0"))
+          .join("")
+      );
+    } catch {
+      return "";
+    }
+  };
+  const isJwt = (v) => typeof v === "string" && /^[\w-]+\.[\w-]+\.[\w-]*$/.test(v);
+  const claimsOf = (jwt) => {
+    try {
+      return JSON.parse(b64urlToStr(jwt.split(".")[1])) || {};
+    } catch {
+      return {};
+    }
+  };
+
   const out = [];
   const scan = (store, area) => {
     for (let i = 0; i < store.length; i++) {
-      const key = store.key(i);
-      if (!key || !/accesstoken/i.test(key)) continue;
       let entry;
       try {
-        entry = JSON.parse(store.getItem(key));
+        entry = JSON.parse(store.getItem(store.key(i)));
       } catch {
-        continue; // encrypted or unrelated value
+        continue; // raw string, encrypted blob, or unrelated value
       }
-      if (!entry || !/^AccessToken/.test(entry.credentialType) || !entry.secret) continue;
+      if (!entry || typeof entry !== "object" || !isJwt(entry.secret)) continue;
+
+      const ct = String(entry.credentialType || "");
+      const claims = claimsOf(entry.secret);
+      // credentialType is authoritative for MSAL; the JWT claims are a fallback
+      // for non-standard caches (access tokens carry scp/roles, id tokens a nonce).
+      const type = /^IdToken$/i.test(ct)
+        ? "id"
+        : /^AccessToken/i.test(ct)
+        ? "access"
+        : claims.scp || claims.roles
+        ? "access"
+        : claims.nonce
+        ? "id"
+        : "access";
+
       out.push({
         area,
+        type,
         secret: entry.secret,
-        scopes: entry.target || "",
-        tenant: entry.realm || "",
-        clientId: entry.clientId || "",
-        account: entry.homeAccountId || "",
-        expiresOn: Number(entry.expiresOn) || 0, // epoch seconds
+        scopes: String(entry.target || claims.scp || ""),
+        aud: String(Array.isArray(claims.aud) ? claims.aud.join(" ") : claims.aud || ""),
+        tenant: String(entry.realm || claims.tid || ""),
+        clientId: String(entry.clientId || claims.appid || claims.azp || ""),
+        expiresOn: Number(entry.expiresOn) || Number(claims.exp) || 0, // epoch seconds
         cachedAt: Number(entry.cachedAt) || 0, // epoch seconds (ms in some versions)
       });
     }
@@ -63,7 +100,7 @@ export async function getMsalTokens(tabId) {
     const [res] = await chrome.scripting.executeScript({ target: { tabId }, func: readMsalTokens });
     return res?.result ?? [];
   } catch {
-    return []; // restricted page (chrome://, store, etc.)
+    return []; // restricted page (chrome://, web store, etc.)
   }
 }
 
@@ -76,18 +113,35 @@ export async function copyToTab(tabId, text) {
   }
 }
 
+// A project's token-copy rule, with defaults for projects saved before the feature.
+export function tokenRule(project) {
+  const t = (project && project.token) || {};
+  return {
+    type: t.type === "id" ? "id" : "access",
+    filter: typeof t.filter === "string" ? t.filter.trim() : "",
+  };
+}
+
 // Normalise cachedAt to ms whether MSAL stored seconds or milliseconds.
 function cachedMs(t) {
   const n = t.cachedAt || t.expiresOn;
   return n > 1e12 ? n : n * 1000;
 }
 
-// Newest token that is still valid; falls back to the newest expired one so the
-// popup can still show something and say it's stale.
-export function pickToken(tokens, now = Date.now()) {
+// The token a rule selects: right type, matching the scope/audience filter if any,
+// newest that's still valid (falling back to the newest expired one so the UI can
+// show it and flag staleness). Returns null when nothing matches the rule.
+export function pickToken(tokens, rule = {}, now = Date.now()) {
   if (!tokens?.length) return null;
+  const type = rule.type === "id" ? "id" : "access";
+  const filter = String(rule.filter || "").trim().toLowerCase();
+
+  let pool = tokens.filter((t) => t.type === type);
+  if (filter) pool = pool.filter((t) => `${t.scopes} ${t.aud}`.toLowerCase().includes(filter));
+  if (!pool.length) return null;
+
   const skew = 10_000;
-  const byNewest = [...tokens].sort((a, b) => cachedMs(b) - cachedMs(a));
+  const byNewest = [...pool].sort((a, b) => cachedMs(b) - cachedMs(a));
   const chosen = byNewest.find((t) => t.expiresOn * 1000 - skew > now) ?? byNewest[0];
   return { ...chosen, expired: chosen.expiresOn * 1000 <= now };
 }

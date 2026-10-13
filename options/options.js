@@ -9,6 +9,7 @@ import {
   suggestColor,
   switchUrl,
 } from "../features/domain-switch.js";
+import { tokenRule } from "../features/msal-token.js";
 import { icons } from "../lib/icons.js";
 
 const $ = (id) => document.getElementById(id);
@@ -16,7 +17,11 @@ const projectsEl = $("projects");
 
 // Working copy. Rows can be incomplete here; only complete ones are saved.
 // `autoColor` marks envs whose colour should follow their name until picked by hand.
-let projects = (await getProjects()).map((p) => ({ ...p, envs: p.envs.map((e) => ({ ...e })) }));
+let projects = (await getProjects()).map((p) => ({
+  ...p,
+  token: tokenRule(p),
+  envs: p.envs.map((e) => ({ ...e })),
+}));
 const rowRefs = new Map(); // env id -> { nameInput, domainInput, errorEl, wrap }
 const countRefs = new Map(); // project id -> count element
 
@@ -47,6 +52,7 @@ function toStored() {
   return projects.map((p) => ({
     id: p.id,
     name: p.name.trim() || "Untitled project",
+    token: tokenRule(p),
     envs: p.envs
       .filter(isComplete)
       .map(({ id, name, domain, color }) => ({ id, name: name.trim(), domain: cleanDomain(domain), color })),
@@ -113,6 +119,7 @@ function render() {
 }
 
 function renderProject(project) {
+  if (!project.token) project.token = tokenRule(project);
   const card = document.createElement("div");
   card.className = "project";
   card.innerHTML = `
@@ -123,6 +130,16 @@ function renderProject(project) {
     </div>
     <div class="envs">
       <div class="env-cols"><span></span><span>Name</span><span>Domain</span><span></span></div>
+    </div>
+    <div class="project-token">
+      <span class="pt-icon">${icons.key}</span>
+      <span class="pt-label">Copy token</span>
+      <select class="pt-type" aria-label="Which token to copy">
+        <option value="access">Access token</option>
+        <option value="id">ID token</option>
+      </select>
+      <input type="text" class="pt-filter" aria-label="Token scope or audience filter"
+             placeholder="scope or audience contains… (optional)" spellcheck="false" />
     </div>
     <div class="project-foot">
       <button class="ghost">${icons.plus} Add environment</button>
@@ -137,6 +154,19 @@ function renderProject(project) {
   });
 
   countRefs.set(project.id, card.querySelector(".count"));
+
+  const typeSel = card.querySelector(".pt-type");
+  const filterInput = card.querySelector(".pt-filter");
+  typeSel.value = project.token.type;
+  filterInput.value = project.token.filter;
+  typeSel.addEventListener("change", () => {
+    project.token.type = typeSel.value;
+    scheduleSave();
+  });
+  filterInput.addEventListener("input", () => {
+    project.token.filter = filterInput.value;
+    scheduleSave();
+  });
 
   card.querySelector(".project-head .icon-btn").addEventListener("click", () =>
     mutate(() => (projects = projects.filter((p) => p !== project)), {

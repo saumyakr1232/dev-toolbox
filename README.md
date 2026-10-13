@@ -24,8 +24,15 @@ token expires every hour and you need a fresh one for Postman or `curl`.
 - **Right-click** any page → **Dev Toolbox** → *Copy MSAL bearer token* (a ✓ badge confirms).
 
 It reads MSAL.js's cache from the page's `localStorage`/`sessionStorage` on the active tab
-(no host permissions) and picks the newest token that hasn't expired. Plain-text cache entries
-are supported; `kmsi`-off encrypted entries in msal-browser v4 are skipped.
+(no host permissions), classifies each entry as an **access** or **ID** token (by MSAL's
+`credentialType`, falling back to decoding the JWT), and copies the newest one that hasn't
+expired. Plain-text cache entries are supported; `kmsi`-off encrypted entries in
+msal-browser v4 are skipped.
+
+Each project sets its own rule in **Settings** → *Copy token*:
+- **Access token** (default) or **ID token**.
+- An optional **scope/audience filter** — e.g. `api://my-api` — so apps that hold tokens for
+  several APIs (Graph + your own) always copy the right one.
 
 ## Install
 1. Open `chrome://extensions` and enable **Developer mode**.

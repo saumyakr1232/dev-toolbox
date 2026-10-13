@@ -83,6 +83,10 @@ function hostnameOf(domain) {
   return domain.replace(/:\d+$/, "");
 }
 
+function isLocalHost(host) {
+  return host === "localhost" || host.endsWith(".localhost") || /^\d+(\.\d+){3}$/.test(host);
+}
+
 function parseHttpUrl(url) {
   try {
     const parsed = new URL(url);
@@ -117,6 +121,10 @@ export function switchUrl(url, fromDomain, toDomain) {
   // Carry the subdomain over ("app."), except onto localhost or an IP where it makes no sense.
   const bareTarget = toHost === "localhost" || /^\d+(\.\d+){3}$/.test(toHost);
   const subdomain = bareTarget ? "" : parsed.hostname.slice(0, parsed.hostname.length - fromHost.length);
+
+  // Local dev servers are served over plain http; going back to a real domain means https.
+  if (isLocalHost(toHost)) parsed.protocol = "http:";
+  else if (isLocalHost(fromHost)) parsed.protocol = "https:";
 
   // Use the target's port if it has one; drop the source port if the env named it;
   // otherwise keep the original port.

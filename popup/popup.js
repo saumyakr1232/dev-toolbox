@@ -1,5 +1,5 @@
 import { findEnv, getProjects, openEnv, switchUrl, usableEnvs } from "../features/domain-switch.js";
-import { getMsalTokens, pickToken } from "../features/msal-token.js";
+import { getMsalTokens, pickToken, tokenRule } from "../features/msal-token.js";
 import { icons } from "../lib/icons.js";
 
 const $ = (id) => document.getElementById(id);
@@ -88,12 +88,21 @@ function renderSwitcher({ project, env: current }) {
 // ---- MSAL bearer token ----------------------------------------------------
 
 async function initToken(tabId) {
-  const picked = pickToken(await getMsalTokens(tabId));
-  if (!picked) return; // leave the section hidden when the app isn't holding one
+  const rule = tokenRule(match?.project);
+  const tokens = await getMsalTokens(tabId);
+  const picked = pickToken(tokens, rule);
+
+  // Nothing of the requested kind anywhere: leave the section hidden unless the
+  // page clearly has MSAL tokens the rule filtered out — then say why.
+  if (!picked) {
+    if (tokens.length) renderNoToken(rule, tokens);
+    return;
+  }
 
   $("token").hidden = false;
   $("token-icon").innerHTML = icons.key;
   $("token-copy").innerHTML = icons.copy;
+  $("token-title").textContent = picked.type === "id" ? "Copy ID token" : "Copy access token";
   $("token-sub").textContent = tokenSummary(picked);
   if (picked.expired) $("token").classList.add("expired");
 
@@ -109,13 +118,26 @@ async function initToken(tabId) {
   });
 }
 
-// "api://… · expires in 42m"  /  "expired 5m ago"
+// Tokens exist but the project's rule matched none of them.
+function renderNoToken(rule, tokens) {
+  const kinds = [...new Set(tokens.map((t) => t.type))].join(" + ");
+  const want = rule.type === "id" ? "ID" : "access";
+  $("token").hidden = false;
+  $("token").classList.add("expired");
+  $("token-icon").innerHTML = icons.key;
+  $("copy-token").disabled = true;
+  $("token-title").textContent = `No ${want} token matches`;
+  $("token-sub").textContent = rule.filter
+    ? `filter “${rule.filter}” · found ${kinds}`
+    : `found ${kinds} only`;
+}
+
+// "Access · api://… · expires in 42m"  /  "expired 5m ago"
 function tokenSummary(token) {
   const scope = firstScope(token.scopes);
   const left = token.expiresOn * 1000 - Date.now();
-  const rel =
-    left <= 0 ? `expired ${relTime(-left)} ago` : `expires in ${relTime(left)}`;
-  return scope ? `${scope} · ${rel}` : rel;
+  const rel = left <= 0 ? `expired ${relTime(-left)} ago` : `expires in ${relTime(left)}`;
+  return [scope, rel].filter(Boolean).join(" · ");
 }
 
 function firstScope(target) {

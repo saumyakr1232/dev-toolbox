@@ -7,7 +7,7 @@ import {
   urlPatternsFor,
   usableEnvs,
 } from "./features/domain-switch.js";
-import { copyToTab, getMsalTokens, pickToken } from "./features/msal-token.js";
+import { copyToTab, getMsalTokens, pickToken, tokenRule } from "./features/msal-token.js";
 
 const PAGE_CONTEXTS = ["page", "frame", "selection", "link", "image", "editable"];
 const ROOT = "root";
@@ -99,7 +99,9 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   if (!tab) return;
 
   if (feature === "token") {
-    const picked = pickToken(await getMsalTokens(tab.id));
+    const url = tab.url || info.pageUrl || "";
+    const rule = tokenRule(findEnv(await getProjects(), url)?.project);
+    const picked = pickToken(await getMsalTokens(tab.id), rule);
     if (!picked) return flashBadge("none", "#6b7280");
     const ok = await copyToTab(tab.id, picked.secret);
     return flashBadge(ok ? "✓" : "err", ok ? "#16a34a" : "#dc2626");

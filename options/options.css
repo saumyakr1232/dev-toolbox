@@ -61,6 +61,32 @@ input.title-input:hover { border-color: var(--border); }
 .env-error { color: var(--danger); font-size: 12px; margin: 4px 0 2px 36px; }
 .env-error:empty { display: none; }
 
+.project-token {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin: 2px 0 0;
+  border-top: 1px solid var(--border);
+}
+.project-token .pt-icon { display: inline-flex; color: var(--muted); }
+.project-token .pt-icon svg { width: 15px; height: 15px; }
+.project-token .pt-label { font-weight: 600; white-space: nowrap; }
+.project-token .pt-type { flex: none; width: auto; }
+.project-token .pt-filter { flex: 1; min-width: 0; }
+
+select.pt-type {
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 8px;
+  cursor: pointer;
+}
+select.pt-type:hover { border-color: var(--border-strong); }
+select.pt-type:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+
 .project-foot { padding: 4px 8px 10px; }
 .project-foot button, .add-project { display: inline-flex; align-items: center; gap: 6px; }
 .project-foot button svg, .add-project svg { width: 15px; height: 15px; }
