@@ -27,6 +27,18 @@
       <div class="empty-text muted" id="empty-text"></div>
       <button id="add-site" class="primary" hidden></button>
     </div>
+
+    <div id="token" class="token" hidden>
+      <div class="label">API token</div>
+      <button id="copy-token" class="token-btn">
+        <span class="token-icon" id="token-icon"></span>
+        <span class="token-text">
+          <span class="token-title" id="token-title">Copy bearer token</span>
+          <span class="token-sub muted" id="token-sub"></span>
+        </span>
+        <span class="token-copy" id="token-copy"></span>
+      </button>
+    </div>
   </main>
   <script type="module" src="popup.js"></script>
 </body>

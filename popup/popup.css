@@ -61,6 +61,36 @@ ul { list-style: none; margin: 0; padding: 0; }
 .inline-icon { display: inline-flex; vertical-align: -2px; }
 .inline-icon svg { width: 12px; height: 12px; }
 
+/* MSAL token */
+.token { margin-top: 6px; padding-top: 10px; border-top: 1px solid var(--border); }
+#main > #token:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+.token-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  text-align: left;
+  background: transparent;
+  border-color: transparent;
+  border-radius: 8px;
+}
+.token-btn:hover { background: var(--surface-hover); border-color: transparent; }
+.token-icon { display: inline-flex; color: var(--accent); }
+.token-icon svg { width: 18px; height: 18px; }
+.token.expired .token-icon { color: var(--muted); }
+.token-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.token-title { font-weight: 600; }
+.token-sub {
+  font-size: 11.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.token-copy { display: inline-flex; color: var(--muted); }
+.token-btn:hover .token-copy { color: var(--text); }
+.token-copy svg { width: 15px; height: 15px; }
+
 .empty { text-align: center; padding: 14px 16px 8px; }
 .empty-icon { color: var(--muted); }
 .empty-icon svg { width: 28px; height: 28px; }

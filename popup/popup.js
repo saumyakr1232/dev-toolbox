@@ -1,4 +1,5 @@
 import { findEnv, getProjects, openEnv, switchUrl, usableEnvs } from "../features/domain-switch.js";
+import { getMsalTokens, pickToken } from "../features/msal-token.js";
 import { icons } from "../lib/icons.js";
 
 const $ = (id) => document.getElementById(id);
@@ -9,6 +10,8 @@ const match = findEnv(await getProjects(), url);
 
 $("settings").innerHTML = icons.settings;
 $("settings").addEventListener("click", () => openSettings());
+
+if (tab?.id != null && /^https?:/i.test(url)) initToken(tab.id);
 
 function openSettings(params = "") {
   if (params) chrome.tabs.create({ url: chrome.runtime.getURL("options/options.html") + params });
@@ -80,6 +83,51 @@ function renderSwitcher({ project, env: current }) {
       rows[(next + rows.length) % rows.length].focus();
     }
   });
+}
+
+// ---- MSAL bearer token ----------------------------------------------------
+
+async function initToken(tabId) {
+  const picked = pickToken(await getMsalTokens(tabId));
+  if (!picked) return; // leave the section hidden when the app isn't holding one
+
+  $("token").hidden = false;
+  $("token-icon").innerHTML = icons.key;
+  $("token-copy").innerHTML = icons.copy;
+  $("token-sub").textContent = tokenSummary(picked);
+  if (picked.expired) $("token").classList.add("expired");
+
+  $("copy-token").addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(picked.secret);
+    } catch {
+      return; // clipboard blocked; leave label unchanged
+    }
+    $("token-title").textContent = picked.expired ? "Copied (expired)" : "Copied";
+    $("token-copy").innerHTML = icons.check;
+    setTimeout(() => window.close(), 600);
+  });
+}
+
+// "api://… · expires in 42m"  /  "expired 5m ago"
+function tokenSummary(token) {
+  const scope = firstScope(token.scopes);
+  const left = token.expiresOn * 1000 - Date.now();
+  const rel =
+    left <= 0 ? `expired ${relTime(-left)} ago` : `expires in ${relTime(left)}`;
+  return scope ? `${scope} · ${rel}` : rel;
+}
+
+function firstScope(target) {
+  const scope = String(target).split(/\s+/).filter(Boolean)[0];
+  return scope ? scope.replace(/\/\.default$/, "") : "";
+}
+
+function relTime(ms) {
+  const m = Math.round(ms / 60000);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  return h < 24 ? `${h}h ${m % 60}m` : `${Math.floor(h / 24)}d`;
 }
 
 function renderEmpty(custom) {

@@ -7,6 +7,7 @@ import {
   urlPatternsFor,
   usableEnvs,
 } from "./features/domain-switch.js";
+import { copyToTab, getMsalTokens, pickToken } from "./features/msal-token.js";
 
 const PAGE_CONTEXTS = ["page", "frame", "selection", "link", "image", "editable"];
 const ROOT = "root";
@@ -23,20 +24,35 @@ async function buildMenus() {
   const projects = (await getProjects())
     .map((project) => ({ ...project, envs: usableEnvs(project) }))
     .filter((project) => project.envs.length >= 2);
-  if (projects.length === 0) return;
 
-  const allPatterns = projects.flatMap((p) => p.envs.flatMap((env) => urlPatternsFor(env.domain)));
-  // A single explicit root keeps everything under "Dev Toolbox" with the extension icon,
-  // and only appears on sites that belong to a project.
+  // A single explicit root keeps everything under "Dev Toolbox" with the extension icon.
+  // It shows on any http(s) page so the token action is always reachable; the
+  // environment-switch items below gate themselves to the pages they apply to.
   chrome.contextMenus.create({
     id: ROOT,
     title: "Dev Toolbox",
     contexts: PAGE_CONTEXTS,
-    documentUrlPatterns: allPatterns,
+    documentUrlPatterns: ["http://*/*", "https://*/*"],
   });
 
   for (const project of projects) buildDomainSwitchMenu(project);
-  // Future features add their own items under ROOT here.
+
+  if (projects.length) {
+    chrome.contextMenus.create({
+      id: "token:sep",
+      parentId: ROOT,
+      type: "separator",
+      contexts: PAGE_CONTEXTS,
+      documentUrlPatterns: ["http://*/*", "https://*/*"],
+    });
+  }
+  chrome.contextMenus.create({
+    id: "token:copy",
+    parentId: ROOT,
+    title: "Copy MSAL bearer token",
+    contexts: PAGE_CONTEXTS,
+    documentUrlPatterns: ["http://*/*", "https://*/*"],
+  });
 }
 
 function buildDomainSwitchMenu(project) {
@@ -69,9 +85,27 @@ function buildDomainSwitchMenu(project) {
   }
 }
 
+// Flash the toolbar badge to confirm a context-menu action (no notifications permission).
+let badgeTimer;
+function flashBadge(text, color = "#16a34a") {
+  chrome.action.setBadgeBackgroundColor({ color });
+  chrome.action.setBadgeText({ text });
+  clearTimeout(badgeTimer);
+  badgeTimer = setTimeout(() => chrome.action.setBadgeText({ text: "" }), 2000);
+}
+
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const [feature, projectId, envId, mode] = String(info.menuItemId).split(":");
-  if (feature !== "env" || !tab) return;
+  if (!tab) return;
+
+  if (feature === "token") {
+    const picked = pickToken(await getMsalTokens(tab.id));
+    if (!picked) return flashBadge("none", "#6b7280");
+    const ok = await copyToTab(tab.id, picked.secret);
+    return flashBadge(ok ? "✓" : "err", ok ? "#16a34a" : "#dc2626");
+  }
+
+  if (feature !== "env") return;
 
   const project = (await getProjects()).find((p) => p.id === projectId);
   const target = project?.envs.find((env) => env.id === envId);

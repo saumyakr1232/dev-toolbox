@@ -1,9 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Dev Toolbox",
-  "version": "2.0.0",
-  "description": "Jump between environments of the same app (Prod, QA, Staging, Local) from the right-click menu or toolbar, keeping your place.",
-  "permissions": ["contextMenus", "storage", "activeTab"],
+  "version": "2.1.0",
+  "description": "Jump between environments of the same app (Prod, QA, Staging, Local) from the right-click menu or toolbar, and copy the app's MSAL bearer token for Postman.",
+  "permissions": ["contextMenus", "storage", "activeTab", "scripting"],
   "background": {
     "service_worker": "background.js",
     "type": "module"

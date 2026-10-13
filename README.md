@@ -15,6 +15,18 @@ Group the domains one app runs on into a **project** — e.g. *Prod* `test.com`,
 - **Settings** (toolbar icon → ⚙) to manage projects, environment names, colours and domains.
   Subdomains carry over (`app.test.com` → `app.test-qa.com`) and ports are supported.
 
+### MSAL bearer token
+Copy the access token the current app is already holding — handy when an Azure AD / Entra
+token expires every hour and you need a fresh one for Postman or `curl`.
+
+- **Toolbar icon** → **Copy bearer token** shows the token's scope and time-to-expiry, and
+  copies the raw JWT on click.
+- **Right-click** any page → **Dev Toolbox** → *Copy MSAL bearer token* (a ✓ badge confirms).
+
+It reads MSAL.js's cache from the page's `localStorage`/`sessionStorage` on the active tab
+(no host permissions) and picks the newest token that hasn't expired. Plain-text cache entries
+are supported; `kmsi`-off encrypted entries in msal-browser v4 are skipped.
+
 ## Install
 1. Open `chrome://extensions` and enable **Developer mode**.
 2. Click **Load unpacked** and select this folder.
