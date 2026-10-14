@@ -56,30 +56,17 @@ async function buildMenus() {
 }
 
 function buildDomainSwitchMenu(project) {
-  const item = (props) =>
-    chrome.contextMenus.create({ parentId: ROOT, contexts: PAGE_CONTEXTS, ...props });
-  const projectPatterns = project.envs.flatMap((env) => urlPatternsFor(env.domain));
-  // Each "Open in X" is shown on the project's other environments, not on X itself.
+  // Each "Open in X" is shown on the project's other environments, not on X itself,
+  // and opens the target in a new tab grouped with the current one.
   const patternsExcept = (target) =>
     project.envs.filter((env) => env !== target).flatMap((env) => urlPatternsFor(env.domain));
 
   for (const env of project.envs) {
-    item({
-      id: `env:${project.id}:${env.id}:here`,
+    chrome.contextMenus.create({
+      id: `env:${project.id}:${env.id}`,
+      parentId: ROOT,
+      contexts: PAGE_CONTEXTS,
       title: `Open in ${env.name}`,
-      documentUrlPatterns: patternsExcept(env),
-    });
-  }
-
-  item({ id: `sep:${project.id}`, type: "separator", documentUrlPatterns: projectPatterns });
-
-  const newTabParent = `newtab:${project.id}`;
-  item({ id: newTabParent, title: "Open in new tab", documentUrlPatterns: projectPatterns });
-  for (const env of project.envs) {
-    item({
-      id: `env:${project.id}:${env.id}:new`,
-      parentId: newTabParent,
-      title: env.name,
       documentUrlPatterns: patternsExcept(env),
     });
   }
@@ -95,7 +82,7 @@ function flashBadge(text, color = "#16a34a") {
 }
 
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
-  const [feature, projectId, envId, mode] = String(info.menuItemId).split(":");
+  const [feature, projectId, envId] = String(info.menuItemId).split(":");
   if (!tab) return;
 
   if (feature === "token") {
@@ -116,7 +103,10 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const current = project && findEnv([project], url);
   if (!target || !current) return;
 
-  await openEnv({ ...tab, url }, current.env, target, { newTab: mode === "new" });
+  await openEnv({ ...tab, url }, current.env, target, {
+    newTab: true,
+    group: { title: project.name, color: target.color },
+  });
 });
 
 chrome.runtime.onInstalled.addListener(async () => {

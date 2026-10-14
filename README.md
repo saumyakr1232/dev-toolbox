@@ -9,9 +9,10 @@ Group the domains one app runs on into a **project** — e.g. *Prod* `test.com`,
 *Local* `localhost:3000` — and jump between them while keeping the path, query and hash:
 `test.com/dashboard/2` → `test-qa.com/dashboard/2`.
 
-- **Right-click** any page of a project → **Dev Toolbox** → *Open in QA*, or *Open in new tab ▸ QA*.
+- **Right-click** any page of a project → **Dev Toolbox** → *Open in QA*. It opens in a new tab,
+  grouped with the current one (named after the project, coloured like the target environment).
 - **Toolbar icon** shows the current environment and the others to switch to.
-  Click to open here, ⌘/Ctrl-click or ↗ for a new tab, or press `1`–`9`.
+  Click to open here, ⌘/Ctrl-click or ↗ for a new (grouped) tab, or press `1`–`9`.
 - **Settings** (toolbar icon → ⚙) to manage projects, environment names, colours and domains.
   Subdomains carry over (`app.test.com` → `app.test-qa.com`) and ports are supported.
 

@@ -163,16 +163,38 @@ export function findEnv(projects, url) {
   return best && { project: best.project, env: best.env };
 }
 
-export async function openEnv(tab, fromEnv, toEnv, { newTab = false } = {}) {
+// Env colour -> nearest Chrome tab-group colour.
+const GROUP_COLORS = { rose: "red", amber: "orange", green: "green", blue: "blue", violet: "purple", slate: "grey" };
+const NO_GROUP = chrome.tabGroups?.TAB_GROUP_ID_NONE ?? -1;
+
+export async function openEnv(tab, fromEnv, toEnv, { newTab = false, group = null } = {}) {
   if (fromEnv.id === toEnv.id) return false;
   const target = switchUrl(tab.url, fromEnv.domain, toEnv.domain);
   if (!target) return false;
-  if (newTab) {
-    await chrome.tabs.create({ url: target, index: tab.index + 1, openerTabId: tab.id, active: true });
-  } else {
+  if (!newTab) {
     await chrome.tabs.update(tab.id, { url: target });
+    return true;
   }
+  const created = await chrome.tabs.create({ url: target, index: tab.index + 1, openerTabId: tab.id, active: true });
+  if (group) await groupTabs(tab, created, group);
   return true;
+}
+
+// Put the original tab and the newly opened one in the same group. Reuses the
+// original tab's group if it already has one; otherwise makes a fresh group
+// named after the project and coloured like the target environment.
+async function groupTabs(openerTab, newTab, { title, color }) {
+  if (!chrome.tabs.group) return; // older Chrome without tab groups
+  try {
+    if (openerTab.groupId != null && openerTab.groupId !== NO_GROUP) {
+      await chrome.tabs.group({ groupId: openerTab.groupId, tabIds: [newTab.id] });
+      return;
+    }
+    const groupId = await chrome.tabs.group({ tabIds: [openerTab.id, newTab.id] });
+    await chrome.tabGroups?.update(groupId, { title, color: GROUP_COLORS[color] ?? "grey" });
+  } catch (err) {
+    console.warn("Could not group tabs", err); // tab still opened; grouping is best-effort
+  }
 }
 
 // ---- Migration from v1 one-way rules -------------------------------------

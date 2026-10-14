@@ -44,7 +44,10 @@ function renderSwitcher({ project, env: current }) {
   $("hint-icon").innerHTML = icons.external;
   if (!/Mac/i.test(navigator.platform)) $("hint-mod").textContent = "Ctrl";
   const go = async (env, newTab) => {
-    await openEnv(tab, current, env, { newTab });
+    await openEnv(tab, current, env, {
+      newTab,
+      group: newTab ? { title: project.name, color: env.color } : null,
+    });
     window.close();
   };
 
