@@ -145,6 +145,49 @@ select.pt-type:focus { outline: none; border-color: var(--accent); box-shadow: 0
 .picker .dot { width: 16px; height: 16px; }
 .picker button[aria-pressed="true"] .dot { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--env); }
 
+/* Settings rows */
+.setting {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+.setting-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.setting-title { font-weight: 600; }
+
+input.switch {
+  appearance: none;
+  flex: none;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--border-strong);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+input.switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 20%);
+  transition: transform 0.15s;
+}
+input.switch:checked { background: var(--accent); }
+input.switch:checked::after { transform: translateX(16px); }
+input.switch:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--accent-soft); }
+
 /* Try it */
 .test-results { margin-top: 12px; }
 .test-results:empty { display: none; }

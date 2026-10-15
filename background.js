@@ -1,6 +1,7 @@
 import {
   findEnv,
   getProjects,
+  getSettings,
   migrateLegacyRules,
   onProjectsChanged,
   openEnv,
@@ -56,8 +57,7 @@ async function buildMenus() {
 }
 
 function buildDomainSwitchMenu(project) {
-  // Each "Open in X" is shown on the project's other environments, not on X itself,
-  // and opens the target in a new tab grouped with the current one.
+  // Each "Open in X" is shown on the project's other environments, not on X itself.
   const patternsExcept = (target) =>
     project.envs.filter((env) => env !== target).flatMap((env) => urlPatternsFor(env.domain));
 
@@ -103,9 +103,12 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const current = project && findEnv([project], url);
   if (!target || !current) return;
 
+  // By default the target opens in a new tab grouped with the current one; with
+  // grouping turned off in settings it switches in place.
+  const { groupTabs } = await getSettings();
   await openEnv({ ...tab, url }, current.env, target, {
-    newTab: true,
-    group: { title: project.name, color: target.color },
+    newTab: groupTabs,
+    group: groupTabs ? { title: project.name, color: target.color } : null,
   });
 });
 

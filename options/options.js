@@ -3,9 +3,11 @@ import {
   cleanDomain,
   findEnv,
   getProjects,
+  getSettings,
   isValidDomain,
   newId,
   saveProjects,
+  saveSettings,
   suggestColor,
   switchUrl,
 } from "../features/domain-switch.js";
@@ -304,6 +306,15 @@ function openPicker(swatchWrap, env) {
 
 document.addEventListener("click", closePicker);
 document.addEventListener("keydown", (e) => e.key === "Escape" && closePicker());
+
+// ---- Switching settings -------------------------------------------------
+
+const groupTabsInput = $("group-tabs");
+groupTabsInput.checked = (await getSettings()).groupTabs;
+groupTabsInput.addEventListener("change", async () => {
+  await saveSettings({ ...(await getSettings()), groupTabs: groupTabsInput.checked });
+  showToast("Saved");
+});
 
 // ---- Toast ----------------------------------------------------------------
 

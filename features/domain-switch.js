@@ -11,6 +11,11 @@
 
 const STORAGE_KEY = "projects";
 const LEGACY_KEY = "domainRules";
+const SETTINGS_KEY = "switchSettings";
+
+// groupTabs: right-click switches open in a new tab grouped with the current one
+// (off: they switch in place), and new tabs from the popup join that group too.
+const DEFAULT_SETTINGS = { groupTabs: true };
 
 export const COLORS = ["rose", "amber", "green", "blue", "violet", "slate"];
 
@@ -59,6 +64,15 @@ export function onProjectsChanged(callback) {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === "sync" && changes[STORAGE_KEY]) callback(changes[STORAGE_KEY].newValue ?? []);
   });
+}
+
+export async function getSettings() {
+  const data = await chrome.storage.sync.get(SETTINGS_KEY);
+  return { ...DEFAULT_SETTINGS, ...data[SETTINGS_KEY] };
+}
+
+export async function saveSettings(settings) {
+  await chrome.storage.sync.set({ [SETTINGS_KEY]: settings });
 }
 
 // ---- Domain helpers -------------------------------------------------------

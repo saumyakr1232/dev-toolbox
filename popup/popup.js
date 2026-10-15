@@ -1,4 +1,4 @@
-import { findEnv, getProjects, openEnv, switchUrl, usableEnvs } from "../features/domain-switch.js";
+import { findEnv, getProjects, getSettings, openEnv, switchUrl, usableEnvs } from "../features/domain-switch.js";
 import { getMsalTokens, pickToken, tokenRule } from "../features/msal-token.js";
 import { icons } from "../lib/icons.js";
 
@@ -7,6 +7,7 @@ const $ = (id) => document.getElementById(id);
 const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
 const url = tab?.url ?? "";
 const match = findEnv(await getProjects(), url);
+const { groupTabs } = await getSettings();
 
 $("settings").innerHTML = icons.settings;
 $("settings").addEventListener("click", () => openSettings());
@@ -46,7 +47,7 @@ function renderSwitcher({ project, env: current }) {
   const go = async (env, newTab) => {
     await openEnv(tab, current, env, {
       newTab,
-      group: newTab ? { title: project.name, color: env.color } : null,
+      group: newTab && groupTabs ? { title: project.name, color: env.color } : null,
     });
     window.close();
   };
