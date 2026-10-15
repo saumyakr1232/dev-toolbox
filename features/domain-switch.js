@@ -4,7 +4,10 @@
 //   { id, name: "Dashboard", envs: [
 //       { id, name: "Prod",  domain: "test.com",       color: "rose"  },
 //       { id, name: "QA",    domain: "test-qa.com",    color: "amber" },
-//       { id, name: "Local", domain: "localhost:3000", color: "violet" } ] }
+//       { id, name: "Local", domain: "localhost:3000", color: "violet", newTab: false } ] }
+//
+// `newTab` (default true) controls whether the right-click "Open in <env>" item opens a new tab
+// or switches the current one.
 //
 // An env domain matches itself and any subdomain, and the subdomain is carried over:
 //   https://app.test.com/dashboard/2?x=1  (Prod → QA)  https://app.test-qa.com/dashboard/2?x=1
@@ -13,8 +16,7 @@ const STORAGE_KEY = "projects";
 const LEGACY_KEY = "domainRules";
 const SETTINGS_KEY = "switchSettings";
 
-// groupTabs: right-click switches open in a new tab grouped with the current one
-// (off: they switch in place), and new tabs from the popup join that group too.
+// groupTabs: new tabs opened by a switch (right-click or popup) are grouped with the current one.
 const DEFAULT_SETTINGS = { groupTabs: true };
 
 export const COLORS = ["rose", "amber", "green", "blue", "violet", "slate"];
@@ -64,6 +66,10 @@ export function onProjectsChanged(callback) {
   chrome.storage.onChanged.addListener((changes, area) => {
     if (area === "sync" && changes[STORAGE_KEY]) callback(changes[STORAGE_KEY].newValue ?? []);
   });
+}
+
+export function opensInNewTab(env) {
+  return env.newTab !== false;
 }
 
 export async function getSettings() {

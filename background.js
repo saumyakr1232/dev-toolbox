@@ -5,6 +5,7 @@ import {
   migrateLegacyRules,
   onProjectsChanged,
   openEnv,
+  opensInNewTab,
   urlPatternsFor,
   usableEnvs,
 } from "./features/domain-switch.js";
@@ -103,12 +104,13 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const current = project && findEnv([project], url);
   if (!target || !current) return;
 
-  // By default the target opens in a new tab grouped with the current one; with
-  // grouping turned off in settings it switches in place.
+  // Each environment chooses new tab (the default) or in place; new tabs are grouped
+  // with the current one unless grouping is turned off in settings.
+  const newTab = opensInNewTab(target);
   const { groupTabs } = await getSettings();
   await openEnv({ ...tab, url }, current.env, target, {
-    newTab: groupTabs,
-    group: groupTabs ? { title: project.name, color: target.color } : null,
+    newTab,
+    group: newTab && groupTabs ? { title: project.name, color: target.color } : null,
   });
 });
 

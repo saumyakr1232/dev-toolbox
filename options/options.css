@@ -42,7 +42,7 @@ input.title-input:hover { border-color: var(--border); }
 .env-cols,
 .env-row {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1.4fr) 92px;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1.4fr) 122px;
   gap: 8px;
   align-items: center;
 }
@@ -58,6 +58,8 @@ input.title-input:hover { border-color: var(--border); }
 .env.flash { animation: flash 1.6s ease-out; border-radius: 8px; }
 @keyframes flash { from { background: var(--accent-soft); } to { background: transparent; } }
 .env-actions { display: flex; justify-content: flex-end; gap: 2px; }
+.icon-btn.toggle[aria-pressed="true"] { color: var(--accent); }
+.icon-btn.toggle[aria-pressed="true"]:hover { background: var(--accent-soft); }
 .env-error { color: var(--danger); font-size: 12px; margin: 4px 0 2px 36px; }
 .env-error:empty { display: none; }
 
@@ -159,6 +161,8 @@ select.pt-type:focus { outline: none; border-color: var(--accent); box-shadow: 0
 }
 .setting-text { flex: 1; display: flex; flex-direction: column; gap: 2px; }
 .setting-title { font-weight: 600; }
+.inline-icon { display: inline-flex; vertical-align: -2px; }
+.inline-icon svg { width: 13px; height: 13px; }
 
 input.switch {
   appearance: none;

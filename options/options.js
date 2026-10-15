@@ -6,6 +6,7 @@ import {
   getSettings,
   isValidDomain,
   newId,
+  opensInNewTab,
   saveProjects,
   saveSettings,
   suggestColor,
@@ -57,7 +58,13 @@ function toStored() {
     token: tokenRule(p),
     envs: p.envs
       .filter(isComplete)
-      .map(({ id, name, domain, color }) => ({ id, name: name.trim(), domain: cleanDomain(domain), color })),
+      .map(({ id, name, domain, color, newTab }) => ({
+        id,
+        name: name.trim(),
+        domain: cleanDomain(domain),
+        color,
+        newTab: newTab !== false,
+      })),
   }));
 }
 
@@ -199,6 +206,7 @@ function renderEnv(project, env, index) {
       <input type="text" class="name-input" placeholder="QA" aria-label="Environment name" />
       <input type="text" class="domain-input" placeholder="test-qa.com" aria-label="Domain" spellcheck="false" />
       <div class="env-actions">
+        <button class="icon-btn toggle" data-newtab>${icons.external}</button>
         <button class="icon-btn" data-move="-1" title="Move up" aria-label="Move up">${icons.up}</button>
         <button class="icon-btn" data-move="1" title="Move down" aria-label="Move down">${icons.down}</button>
         <button class="icon-btn danger" data-delete title="Delete environment" aria-label="Delete environment">${icons.trash}</button>
@@ -243,6 +251,20 @@ function renderEnv(project, env, index) {
       validateAll();
       scheduleSave();
     }
+  });
+
+  const newTabBtn = wrap.querySelector("[data-newtab]");
+  const syncNewTab = () => {
+    const on = opensInNewTab(env);
+    newTabBtn.setAttribute("aria-pressed", String(on));
+    newTabBtn.title = on ? "Right-click opens in a new tab (click to open in the current tab)" : "Right-click opens in the current tab (click to open in a new tab)";
+    newTabBtn.setAttribute("aria-label", "Open in new tab from right-click menu");
+  };
+  syncNewTab();
+  newTabBtn.addEventListener("click", () => {
+    env.newTab = !opensInNewTab(env);
+    syncNewTab();
+    scheduleSave();
   });
 
   const [up, down] = wrap.querySelectorAll("[data-move]");
@@ -309,6 +331,7 @@ document.addEventListener("keydown", (e) => e.key === "Escape" && closePicker())
 
 // ---- Switching settings -------------------------------------------------
 
+$("newtab-icon").innerHTML = icons.external;
 const groupTabsInput = $("group-tabs");
 groupTabsInput.checked = (await getSettings()).groupTabs;
 groupTabsInput.addEventListener("change", async () => {
