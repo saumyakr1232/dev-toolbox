@@ -338,6 +338,12 @@ groupTabsInput.addEventListener("change", async () => {
   await saveSettings({ ...(await getSettings()), groupTabs: groupTabsInput.checked });
   showToast("Saved");
 });
+const nestedMenuInput = $("nested-menu");
+nestedMenuInput.checked = (await getSettings()).nestedMenu;
+nestedMenuInput.addEventListener("change", async () => {
+  await saveSettings({ ...(await getSettings()), nestedMenu: nestedMenuInput.checked });
+  showToast("Saved");
+});
 
 // ---- Toast ----------------------------------------------------------------
 

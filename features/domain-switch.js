@@ -17,7 +17,8 @@ const LEGACY_KEY = "domainRules";
 const SETTINGS_KEY = "switchSettings";
 
 // groupTabs: new tabs opened by a switch (right-click or popup) are grouped with the current one.
-const DEFAULT_SETTINGS = { groupTabs: true };
+// nestedMenu: right-click items sit in a submenu per project instead of directly under Dev Toolbox.
+const DEFAULT_SETTINGS = { groupTabs: true, nestedMenu: false };
 
 export const COLORS = ["rose", "amber", "green", "blue", "violet", "slate"];
 
@@ -79,6 +80,12 @@ export async function getSettings() {
 
 export async function saveSettings(settings) {
   await chrome.storage.sync.set({ [SETTINGS_KEY]: settings });
+}
+
+export function onSettingsChanged(callback) {
+  chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === "sync" && changes[SETTINGS_KEY]) callback();
+  });
 }
 
 // ---- Domain helpers -------------------------------------------------------
