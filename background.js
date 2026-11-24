@@ -4,7 +4,6 @@ import {
   getSettings,
   migrateLegacyRules,
   onProjectsChanged,
-  onSettingsChanged,
   openEnv,
   opensInNewTab,
   urlPatternsFor,
@@ -38,8 +37,7 @@ async function buildMenus() {
     documentUrlPatterns: ["http://*/*", "https://*/*"],
   });
 
-  const { nestedMenu } = await getSettings();
-  for (const project of projects) buildDomainSwitchMenu(project, nestedMenu);
+  for (const project of projects) buildDomainSwitchMenu(project);
 
   if (projects.length) {
     chrome.contextMenus.create({
@@ -59,28 +57,15 @@ async function buildMenus() {
   });
 }
 
-function buildDomainSwitchMenu(project, nested) {
+function buildDomainSwitchMenu(project) {
   // Each "Open in X" is shown on the project's other environments, not on X itself.
   const patternsExcept = (target) =>
     project.envs.filter((env) => env !== target).flatMap((env) => urlPatternsFor(env.domain));
 
-  // Nested: a "<project>" submenu, shown on any of the project's pages, holds its items.
-  let parentId = ROOT;
-  if (nested) {
-    parentId = `project:${project.id}`;
-    chrome.contextMenus.create({
-      id: parentId,
-      parentId: ROOT,
-      contexts: PAGE_CONTEXTS,
-      title: project.name?.trim() || "Project",
-      documentUrlPatterns: project.envs.flatMap((env) => urlPatternsFor(env.domain)),
-    });
-  }
-
   for (const env of project.envs) {
     chrome.contextMenus.create({
       id: `env:${project.id}:${env.id}`,
-      parentId,
+      parentId: ROOT,
       contexts: PAGE_CONTEXTS,
       title: `Open in ${env.name}`,
       documentUrlPatterns: patternsExcept(env),
@@ -135,4 +120,3 @@ chrome.runtime.onInstalled.addListener(async () => {
 });
 chrome.runtime.onStartup.addListener(rebuildMenus);
 onProjectsChanged(rebuildMenus);
-onSettingsChanged(rebuildMenus);
